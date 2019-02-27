@@ -28,6 +28,7 @@ class SentenceRepretention(object):
     def _build_graph(self):            
         self._y = tf.placeholder(dtype=tf.int64, shape=[None], name='input-y')
         self._lens = tf.placeholder(dtype=tf.int64, shape=[None], name='input-lens')
+        self._mask = tf.sequence_mask(self._lens, dtype=tf.float64)
 
         with tf.name_scope('sentence-embedding'):
             self._M = tf.matmul(self._attention, self._output)
@@ -44,12 +45,17 @@ class SentenceRepretention(object):
         
         with tf.name_scope('loss'):
             loss = tf.nn.sparse_softmax_cross_entropy_with_logits(logits=self._fc, labels=self._y)
+            
             self._loss = tf.reduce_mean(loss) + tf.reduce_mean(self._alpha*P)
             optimizer = tf.train.AdamOptimizer(learning_rate=self._lr)
             optimizer = tf.contrib.estimator.clip_gradients_by_norm(optimizer, clip_norm=self._norm)
             optimizer = tf.contrib.estimator.clip_gradients_by_norm(optimizer, clip_norm=-self._norm)
             self._train_op = optimizer.minimize(self._loss)
-            pass
+        
+        with tf.name_scope('acc'):
+            pre = tf.argmax(self._fc, axis=1)
+            acc = tf.equal(pre, self._y)
+            self._acc = tf.reduce_mean(tf.cast(acc, tf.float64))
 
     def fit(self, datapath, wv, batch_size=100, epoch=5):            
         with tf.Session() as sess:
@@ -57,10 +63,10 @@ class SentenceRepretention(object):
             sess.run(tf.initialize_all_variables())
             for steps, (c, ws, lens) in enumerate(dataset):
                 feed = {self._x : ws, self._y: c, self._lens: lens, self._vocab: wv, self._dropout: self._dr}
-                _, loss = sess.run([self._train_op, self._loss], feed_dict=feed)
-                print('step %d, loss: %f' % (steps, loss))
+                loss, acc, _ = sess.run([self._loss, self._acc, self._train_op], feed_dict=feed)
+                print('step %d,acc: %f, loss: %f' % (steps, acc, loss))
           
 if __name__ == "__main__":
     import numpy as np
-    wv = np.random.random([500000, 100])
-    SentenceRepretention().fit('../url-sms-train-samples.csv', wv)
+    #wv = np.random.random([500000, 100])
+    #SentenceRepretention().fit('./xxxxx.csv', wv)
