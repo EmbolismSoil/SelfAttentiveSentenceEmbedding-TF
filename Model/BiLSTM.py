@@ -1,5 +1,6 @@
 import tensorflow as tf
-from tensorflow.nn.rnn_cell import BasicLSTMCell, DropoutWrapper, MultiRNNCell
+
+BasicLSTMCell, DropoutWrapper, MultiRNNCell = tf.nn.rnn_cell.BasicLSTMCell, tf.nn.rnn_cell.DropoutWrapper, tf.nn.rnn_cell.MultiRNNCell
 
 
 class BiLSTM(object):

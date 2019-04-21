@@ -23,7 +23,7 @@ class Dataset(object):
             return c, ws, tf.size(ws)
 
         dataset = dataset.map(__parse_line)
-        dataset = dataset.shuffle(10000)
+        dataset = dataset.shuffle(1000)
         padded_shapes = (tf.TensorShape([]), tf.TensorShape([None]), tf.TensorShape([]))
         self._batched_dataset = dataset.padded_batch(self._batch_size, padded_shapes=padded_shapes)
 
@@ -42,6 +42,9 @@ class Dataset(object):
                 self._sess.run(self._iterator.initializer)
                 c, ws, lens = self._sess.run([self._c_op, self._ws_op, self._len_op])
                 return c, ws, lens
+
+    def next(self):
+        return self.__next__()
 
     def __iter__(self):
         self._sess.run(self._iterator.initializer)

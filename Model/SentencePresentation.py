@@ -53,8 +53,8 @@ class SentencePresentation(object):
             
             self._loss = tf.reduce_mean(loss) + tf.reduce_mean(self._alpha*P)
             optimizer = tf.train.AdamOptimizer(learning_rate=self._lr)
-            #optimizer = tf.contrib.estimator.clip_gradients_by_norm(optimizer, clip_norm=self._norm)
-            #optimizer = tf.contrib.estimator.clip_gradients_by_norm(optimizer, clip_norm=-self._norm)
+            optimizer = tf.contrib.estimator.clip_gradients_by_norm(optimizer, clip_norm=self._norm)
+            optimizer = tf.contrib.estimator.clip_gradients_by_norm(optimizer, clip_norm=-self._norm)
             self._train_op = optimizer.minimize(self._loss)
         
         with tf.name_scope('acc'):
@@ -68,8 +68,7 @@ class SentencePresentation(object):
         for steps, (c, ws, lens) in enumerate(dataset):
             feed = {self._x : ws, self._y: c, self._lens: lens, self._vocab: self._wv, self._dropout: self._dr}
             loss, acc, _ = sess.run([self._loss, self._acc, self._train_op], feed_dict=feed)
-            print('step %d,acc: %f, loss: %f' % (steps, acc, loss))
-        pass
+            yield steps, loss, acc
 
     def predict(self, sess, x, lens):
         feed = {self._x : x, self._vocab: self._wv, self._dropout: 1.0, self._lens: lens}
