@@ -3,16 +3,22 @@ from Model import SentencePresentation
 import numpy as np
 from gensim.models import word2vec
 import json
-import os
 
 if __name__ == "__main__":    
-    wv = np.load('../miniwv.npy')
-    with tf.device('/device:GPU:0'):
-        network =SentencePresentation(wv, wv_dim=100, lstm_size=128, layers=2, dim_r=50, classes=2, dim_a=300, norm=0.5, lr=0.01)
-
-    with tf.Session(config=tf.ConfigProto(allow_soft_placement=True, log_device_placement=True)) as sess:
-        for steps, loss, acc in network.fit(sess, '../samples-train.csv', epoch=10, batch_size=200):
-            print('step %d, loss: %f, acc: %f' % (steps, loss, acc))
-            if steps > 1 and steps % 500 == 0:
-                saver = tf.train.Saver()
-                saver.save(sess, './model/bilstm-model', steps)
+    model = word2vec.Word2Vec.load('./wv.gensim.model')
+    wv = model.wv.vectors
+    network =SentencePresentation(wv, wv_dim=100, lstm_size=64, layers=1, dim_r=30, classes=4, dim_a=10, norm=0.5, lr=0.01)
+    with tf.Session() as sess:
+        network.fit(sess, './train_data.csv', epoch=2)
+        dataset = Dataset(sess, './train_data.csv', 200, '\t', max_len=500, epoch=1)
+        for c, ws, lens in dataset:
+            labels, attentions, embedding = network.predict(sess, ws, lens)
+            for w, attention in zip(ws, attentions):
+                words_json = []
+                w = [model.wv.index2word[i] for i in w]
+                at = np.max(attention, axis=0)
+                for c, a in zip(w, at):
+                    words_json.append({'word': c, 'attention': a}) 
+                words_json.append({'word': '\n', 'attention': 0.0})
+                print('\n\n')
+                print(json.dumps(words_json, ensure_ascii=False))
